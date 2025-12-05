@@ -9,9 +9,9 @@
  * 3. Send Modbus write commands to registers 20-24 to control servos
  * 
  * Example commands:
- * - Write register 21 with value 0x015A to move servo 1 to 90 degrees
+ * - Write register 21 with value 0x005A to move servo 1 to 90 degrees
  * - Write register 21 with value 0x0000 to stop servo 1
- * - Write register 21 with value 0x0290 to move servo 1 to 144 degrees
+ * - Write register 21 with value 0x0090 to move servo 1 to 144 degrees
  */
 
 #include <Arduino.h>
@@ -92,8 +92,8 @@ void setup() {
   Serial.println("Modbus Servo Control Example Initialized");
   Serial.println("Servo registers 20-24 ready for control");
   Serial.println("Example commands:");
-  Serial.println("- Write register 21 with value 0x015A to move servo 1 to 90 degrees");
-  Serial.println("- Write register 21 with value 0x0290 to move servo 1 to 144 degrees");
+  Serial.println("- Write register 21 with value 0x005A to move servo 1 to 90 degrees");
+  Serial.println("- Write register 21 with value 0x0090 to move servo 1 to 144 degrees");
   Serial.println("- Write register 21 with value 0x0000 to stop servo 1");
 }
 
@@ -156,62 +156,48 @@ void processServoControl() {
  * @param controlValue The control value from the register
  */
 void handleServoControl(uint8_t servoIndex, uint16_t controlValue) {
-  // Decode the control value (assuming it's a 16-bit value with:
-  // - Bits 0-7: Target angle (0-180)
-  // - Bits 8-15: Control command (0=stop, 1=start, 2=move)
-  
+  // Extract angle from lower 8 bits of the control value
   uint8_t angle = controlValue & 0xFF;  // Lower 8 bits = angle
-  uint8_t command = (controlValue >> 8) & 0xFF;  // Upper 8 bits = command
   
   // Validate angle
   if (angle > MAX_ANGLE) {
     angle = MAX_ANGLE;
   }
   
-  switch(command) {
-    case SERVO_STOP:
-      // Stop servo movement
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.println(" stopped");
-      break;
-      
-    case SERVO_START:
-      // Start servo at specific angle
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.print(" started at angle ");
-      Serial.println(angle);
-      switch(servoIndex) {
-        case 0: servo0.write(angle); break;
-        case 1: servo1.write(angle); break;
-        case 2: servo2.write(angle); break;
-        case 3: servo3.write(angle); break;
-        case 4: servo4.write(angle); break;
-      }
-      break;
-      
-    case SERVO_MOVE:
-      // Move servo to specific angle
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.print(" moving to angle ");
-      Serial.println(angle);
-      switch(servoIndex) {
-        case 0: servo0.write(angle); break;
-        case 1: servo1.write(angle); break;
-        case 2: servo2.write(angle); break;
-        case 3: servo3.write(angle); break;
-        case 4: servo4.write(angle); break;
-      }
-      break;
-      
-    default:
-      // Unknown command, do nothing
-      Serial.print("Unknown command for servo ");
-      Serial.print(servoIndex);
-      Serial.println(": ");
-      Serial.println(command);
-      break;
-  }
-}
+  // Move servo to the specified angle
+  Serial.print("Servo ");
+  Serial.print(servoIndex);
+  Serial.print(" moving to angle ");
+  Serial.println(angle);
+  
+  switch(servoIndex) {
+    case 0: servo0.write(angle); break;
+    case 1: servo1.write(angle); break;
+    case 2: servo2.write(angle); break;
+    case 3: servo3.write(angle); break;
+    case 4: servo4.write(angle); break;
+   }
+ }
+ 
+ /**
+  * Example function to demonstrate how to write to register #21 (servo 1)
+  * This would be called from a Modbus master device
+  *
+  * Example HEX command to move servo 1 to 90 degrees:
+  * - Write register 21 with value 0x005A (0x5A = 90 degrees)
+  *
+  * @param angle The angle to move servo to (0-180)
+  */
+ void moveServo1ToAngle(uint8_t angle) {
+   // Validate angle
+   if (angle > MAX_ANGLE) {
+     angle = MAX_ANGLE;
+   }
+   
+   // Set register 21 to angle (no command bits needed)
+   uint16_t value = angle;
+   mb.Hreg(SERVO_REG_21, value);
+   
+   Serial.print("Set servo 1 to angle ");
+   Serial.println(angle);
+ }

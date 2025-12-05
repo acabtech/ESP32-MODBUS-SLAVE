@@ -52,14 +52,14 @@ ModbusTesESP32/
 Each register uses a 16-bit value:
 
 - **Bits 0-7**: Target angle (0-180 degrees)
-- **Bits 8-15**: Control command (0=stop, 1=start, 2=move)
+- **Bits 8-15**: Unused (pure angle control)
 
 ## Usage Example
 
 To move servo 1 (register 21) to 90 degrees:
 
 1. Send Modbus write command to register 21
-2. Value: 0x015A (0x01 = move command, 0x5A = 90 degrees)
+2. Value: 0x005A (0x5A = 90 degrees)
 3. ESP32 processes command and moves servo to 90 degrees
 
 ## Implementation Details

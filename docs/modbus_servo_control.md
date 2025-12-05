@@ -33,12 +33,12 @@ This implementation provides a comprehensive Modbus servo control system for ESP
 Each register uses a 16-bit value with the following structure:
 
 - **Bits 0-7 (Lower 8 bits)**: Target angle (0-180 degrees)
-- **Bits 8-15 (Upper 8 bits)**: Control command (0=stop, 1=start, 2=move)
+- **Bits 8-15 (Upper 8 bits)**: Unused (pure angle control)
 
 ## Communication Flow
 
 1. **Command Reception**: Master device sends Modbus write command to registers 20-24
-2. **Data Processing**: ESP32 decodes the 16-bit value into angle and command
+2. **Data Processing**: ESP32 extracts the angle value from the lower 8 bits
 3. **Register Storage**: Values are stored in holding registers for monitoring
 4. **Servo Actuation**: `servo.write()` function is called to move servos to target positions
 5. **Response**: System acknowledges command and updates status
@@ -55,9 +55,9 @@ Each register uses a 16-bit value with the following structure:
 
 #### `handleServoControl(servoIndex, controlValue)`
 
-- Decodes 16-bit control value into angle and command
-- Executes appropriate servo action based on command
-- Supports stop, start, and move commands
+- Extracts angle value from lower 8 bits of 16-bit control value
+- Executes servo movement using `servo.write()`
+- Supports direct angle control without command bits
 
 #### `moveServo1ToAngle(angle)`
 
@@ -69,7 +69,7 @@ Each register uses a 16-bit value with the following structure:
 To move servo 1 (register 21) to 90 degrees:
 
 1. Master sends Modbus write command to register 21
-2. Value written: 0x015A (0x01 = move command, 0x5A = 90 degrees)
+2. Value written: 0x005A (0x5A = 90 degrees)
 3. ESP32 processes the command and moves servo to 90 degrees
 
 ## Code Structure
@@ -124,7 +124,7 @@ To test the implementation:
 
 2. **Register Testing**:
 
-   - Write to register 21 with value 0x015A (move servo 1 to 90 degrees)
+   - Write to register 21 with value 0x005A (move servo 1 to 90 degrees)
    - Verify servo moves to correct position
    - Write to register 21 with value 0x0000 (stop servo)
    - Verify servo stops at current position
@@ -139,7 +139,6 @@ To test the implementation:
 The implementation includes:
 
 - Angle validation (0-180 degrees)
-- Command validation (0-2)
 - Register boundary checking
 - Serial logging for debugging
 

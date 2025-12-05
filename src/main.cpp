@@ -30,19 +30,12 @@ Servo servo4;
 #define MIN_ANGLE 0
 #define MAX_ANGLE 180
 
-// Define servo control values
-#define SERVO_STOP 0
-#define SERVO_START 1
-#define SERVO_MOVE 2
-
 // Global variables to store servo control data
 uint16_t servoControlData[5] = {0, 0, 0, 0, 0};  // For registers 20-24
 
 // Function prototypes
 void handleServoControl(uint8_t servoIndex, uint16_t controlValue);
 void processServoControl();
-void moveServo1ToAngle(uint8_t angle);
-void moveServoToAngle(uint8_t servoIndex, uint8_t angle, uint8_t command);
 
 void setup() {
   // Use Serial2 for CP210x USB-to-UART bridge on COM4
@@ -59,7 +52,7 @@ void setup() {
 
   // Initialize all servos to neutral position
   servo0.write(90);
-  servo1.write(120);
+  servo1.write(90);
   servo2.write(90);
   servo3.write(90);
   servo4.write(90);
@@ -107,7 +100,7 @@ void processServoControl() {
   uint16_t reg24 = mb.Hreg(SERVO_REG_24);
   
   // Process register 20 - Servo 0 control
-  if (reg20 != servoControlData[0]) {       
+  if (reg20 != servoControlData[0]) {
     servoControlData[0] = reg20;
     handleServoControl(0, reg20);
   }
@@ -140,66 +133,29 @@ void processServoControl() {
 /**
  * Handle servo control based on register value
  * @param servoIndex The servo index (0-4)
- * @param controlValue The control value from the register
+ * @param controlValue The control value from the register (lower 8 bits = angle)
  */
 void handleServoControl(uint8_t servoIndex, uint16_t controlValue) {
-  // Decode the control value (assuming it's a 16-bit value with:
-  // - Bits 0-7: Target angle (0-180)
-  // - Bits 8-15: Control command (0=stop, 1=start, 2=move)
-  
+  // Extract angle from lower 8 bits of the control value
   uint8_t angle = controlValue & 0xFF;  // Lower 8 bits = angle
-  uint8_t command = (controlValue >> 8) & 0xFF;  // Upper 8 bits = command
   
   // Validate angle
   if (angle > MAX_ANGLE) {
     angle = MAX_ANGLE;
   }
   
-  switch(command) {
-    case SERVO_STOP:
-      // Stop servo movement
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.println(" stopped");
-      break;
-      
-    case SERVO_START:
-      // Start servo at specific angle
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.print(" started at angle ");
-      Serial.println(angle);
-      switch(servoIndex) {
-        case 0: servo0.write(angle); break;
-        case 1: servo1.write(angle); break;
-        case 2: servo2.write(angle); break;
-        case 3: servo3.write(angle); break;
-        case 4: servo4.write(angle); break;
-      }
-      break;
-      
-    case SERVO_MOVE:
-      // Move servo to specific angle
-      Serial.print("Servo ");
-      Serial.print(servoIndex);
-      Serial.print(" moving to angle ");
-      Serial.println(angle);
-      switch(servoIndex) {
-        case 0: servo0.write(angle); break;
-        case 1: servo1.write(angle); break;
-        case 2: servo2.write(angle); break;
-        case 3: servo3.write(angle); break;
-        case 4: servo4.write(angle); break;
-      }
-      break;
-      
-    default:
-      // Unknown command, do nothing
-      Serial.print("Unknown command for servo ");
-      Serial.print(servoIndex);
-      Serial.println(": ");
-      Serial.println(command);
-      break;
+  // Move servo to the specified angle
+  Serial.print("Servo ");
+  Serial.print(servoIndex);
+  Serial.print(" moving to angle ");
+  Serial.println(angle);
+  
+  switch(servoIndex) {
+    case 0: servo0.write(angle); break;
+    case 1: servo1.write(angle); break;
+    case 2: servo2.write(angle); break;
+    case 3: servo3.write(angle); break;
+    case 4: servo4.write(angle); break;
   }
 }
 
@@ -208,7 +164,7 @@ void handleServoControl(uint8_t servoIndex, uint16_t controlValue) {
  * This would be called from a Modbus master device
  *
  * Example HEX command to move servo 1 to 90 degrees:
- * - Write register 21 with value 0x015A (0x01 = command, 0x5A = 90 degrees)
+ * - Write register 21 with value 0x005A (0x5A = 90 degrees)
  *
  * @param angle The angle to move servo to (0-180)
  */
@@ -218,43 +174,10 @@ void moveServo1ToAngle(uint8_t angle) {
     angle = MAX_ANGLE;
   }
   
-  // Set register 21 to command 2 (move) + angle
-  uint16_t value = (SERVO_MOVE << 8) | angle;
+  // Set register 21 to angle (no command bits needed)
+  uint16_t value = angle;
   mb.Hreg(SERVO_REG_21, value);
   
   Serial.print("Set servo 1 to angle ");
-  Serial.println(angle);
-}
-
-/**
- * Function to move any servo to a specific angle
- * @param servoIndex The servo index (0-4)
- * @param angle The angle to move servo to (0-180)
- * @param command The command to execute (0=stop, 1=start, 2=move)
- */
-void moveServoToAngle(uint8_t servoIndex, uint8_t angle, uint8_t command) {
-  // Validate angle
-  if (angle > MAX_ANGLE) {
-    angle = MAX_ANGLE;
-  }
-  
-  // Set the appropriate register based on servo index
-  uint16_t reg;
-  switch(servoIndex) {
-    case 0: reg = SERVO_REG_20; break;
-    case 1: reg = SERVO_REG_21; break;
-    case 2: reg = SERVO_REG_22; break;
-    case 3: reg = SERVO_REG_23; break;
-    case 4: reg = SERVO_REG_24; break;
-    default: return; // Invalid servo index
-  }
-  
-  // Set register to command + angle
-  uint16_t value = (command << 8) | angle;
-  mb.Hreg(reg, value);
-  
-  Serial.print("Set servo ");
-  Serial.print(servoIndex);
-  Serial.print(" to angle ");
   Serial.println(angle);
 }
